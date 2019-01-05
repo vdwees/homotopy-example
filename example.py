@@ -1,6 +1,10 @@
-import casadi as ca
-import numpy as np
+import itertools
 import time
+
+import casadi as ca
+import matplotlib.animation as manimation
+import matplotlib.pyplot as plt
+import numpy as np
 
 # These parameters correspond to Table 1
 T = 10
@@ -33,10 +37,12 @@ H = ca.MX.sym("H", 2, T)
 theta = ca.MX.sym("theta")
 
 # Left boundary condition
-Q_left = ca.transpose(ca.DM(np.linspace(0.0, 1.0, T + 1)))
+Q_left = np.zeros(T + 1)
+Q_left[T // 3 : 2 * (T // 3)] = 2.0
+Q_left = ca.DM(Q_left).T
 
 # Hydraulic constraints
-Q_full = ca.horzcat(ca.vertcat(Q_left[0], Q0), ca.vertcat(Q_left[1:], Q))
+Q_full = ca.vertcat(Q_left, ca.horzcat(Q0, Q))
 H_full = ca.horzcat(H0, H)
 A_full = w * 0.5 * (H_full[1:, :] + H_full[:-1, :] - 2 * H_b)
 P_full = w + (H_full[1:, :] + H_full[:-1, :] - 2 * H_b)
@@ -106,7 +112,7 @@ t1 = time.time()
 
 results = {}
 
-theta_values = np.linspace(0.0, 1.0, 10)
+theta_values = np.linspace(0.0, 1.0, 4)
 for theta_value in theta_values:
     solution = solver(lbx=lbX, ubx=ubX, lbg=lbg, ubg=ubg, p=theta_value, x0=x0)
     if solver.stats()["return_status"] != "Solve_Succeeded":
@@ -117,49 +123,45 @@ for theta_value in theta_values:
     Q_res = ca.reshape(x0[: Q.size1() * Q.size2()], Q.size1(), Q.size2())
     H_res = ca.reshape(x0[Q.size1() * Q.size2() :], H.size1(), H.size2())
     d = {}
-    d["Q_1"] = Q_left
-    d["Q_2"] = ca.horzcat(Q0[0], Q_res[0, :])
-    d["Q_3"] = ca.horzcat(Q0[1], Q_res[1, :])
-    d["H_1"] = ca.horzcat(H0[0], H_res[0, :])
-    d["H_2"] = ca.horzcat(H0[1], H_res[1, :])
+    d["Q_1"] = np.array(Q_left).flatten()
+    d["Q_2"] = np.array(ca.horzcat(Q0[0], Q_res[0, :])).flatten()
+    d["Q_3"] = np.array(ca.horzcat(Q0[1], Q_res[1, :])).flatten()
+    d["H_1"] = np.array(ca.horzcat(H0[0], H_res[0, :])).flatten()
+    d["H_2"] = np.array(ca.horzcat(H0[1], H_res[1, :])).flatten()
     results[theta_value] = d
 
 t2 = time.time()
 
 print("Time elapsed in solver: {}s".format(t2 - t1))
 
-# Generate plots using matplotlib
-from mpl_toolkits.mplot3d import axes3d
-import matplotlib.pyplot as plt
 
-X, Y = np.meshgrid(theta_values, times)
-Z = np.zeros(X.shape)
+# Generate Plot
+n_subplots = 2
+fig, axarr = plt.subplots(n_subplots, sharex=True, figsize=(8, 3 * n_subplots))
+# axarr[0].set_title("Homotopy Deformation of Semi-Implicit Inertial Wave Equations")
 
-for key in ["H_1", "H_2", "Q_1", "Q_2", "Q_3"]:
-    for i in range(Z.shape[0]):
-        for j in range(Z.shape[1]):
-            Z[i, j] = results[X[i, j]][key][i]
+variable_names = "H_1", "H_2", "Q_1", "Q_2", "Q_3"
+for theta, var in itertools.product(theta_values, variable_names):
+    axarr[0 if var.startswith("Q") else 1].plot(
+        times, results[theta][var], label=f"{var}, theta={theta}"
+    )
 
-    if key.startswith("Q"):
-        unit = "m$^3$/s"
-    else:
-        unit = "m"
+axarr[0].set_ylabel("Flow Rate [m³/s]")
+axarr[1].set_ylabel("Water Level [m]")
+axarr[1].set_xlabel("Time [s]")
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection="3d")
-    ax.set_xlabel(r"$\theta$ [-]")
-    ax.set_ylabel(r"$t$ [$\cdot 10^3$ s]")
-    ax.set_zlabel("${}$ [{}]".format(key, unit))
-    ax.set_xlim(0, 1)
-    ax.set_ylim(times[0], times[-1])
+# Shrink margins
+fig.tight_layout()
 
-    if key.startswith("Q"):
-        ax.set_zlim(0, 1)
-    else:
-        ax.set_zlim(-0.1, 0.2)
+# Shrink each axis and put a legend to the right of the axis
+for i in range(n_subplots):
+    box = axarr[i].get_position()
+    axarr[i].set_position([box.x0, box.y0, box.width * 0.74, box.height])
+    axarr[i].legend(
+        loc="center left", bbox_to_anchor=(1, 0.5), frameon=False, prop={"size": 8}
+    )
 
-    ax.plot_wireframe(X, Y, Z, rstride=1, cstride=1, color="black")
+plt.autoscale(enable=True, axis="x", tight=True)
 
-    ax.set_yticklabels(("{:.1f}".format(ytick / 1.0e3) for ytick in ax.get_yticks()))
-
-    plt.savefig("{}.pdf".format(key))
+# Output Plot
+plt.savefig("plot.pdf")
