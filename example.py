@@ -5,6 +5,8 @@ import casadi as ca
 import matplotlib.animation as manimation
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.colorbar import ColorbarBase
+from matplotlib.colors import ListedColormap, Normalize
 
 # These parameters correspond to Table 1
 T = 10
@@ -112,7 +114,9 @@ t1 = time.time()
 
 results = {}
 
-theta_values = np.linspace(0.0, 1.0, 4)
+theta_values = np.linspace(0.0, 1.0, 70)
+variable_names = "H_1", "H_2", "Q_1", "Q_2", "Q_3"
+
 for theta_value in theta_values:
     solution = solver(lbx=lbX, ubx=ubX, lbg=lbg, ubg=ubg, p=theta_value, x0=x0)
     if solver.stats()["return_status"] != "Solve_Succeeded":
@@ -128,6 +132,7 @@ for theta_value in theta_values:
     d["Q_3"] = np.array(ca.horzcat(Q0[1], Q_res[1, :])).flatten()
     d["H_1"] = np.array(ca.horzcat(H0[0], H_res[0, :])).flatten()
     d["H_2"] = np.array(ca.horzcat(H0[1], H_res[1, :])).flatten()
+    assert set(variable_names) == set(d.keys())
     results[theta_value] = d
 
 t2 = time.time()
@@ -135,20 +140,27 @@ t2 = time.time()
 print("Time elapsed in solver: {}s".format(t2 - t1))
 
 
-# Generate Plot
-n_subplots = 2
-fig, axarr = plt.subplots(n_subplots, sharex=True, figsize=(8, 3 * n_subplots))
-# axarr[0].set_title("Homotopy Deformation of Semi-Implicit Inertial Wave Equations")
+# Use greyscale style for plots
+plt.style.use("grayscale")
 
-variable_names = "H_1", "H_2", "Q_1", "Q_2", "Q_3"
-for theta, var in itertools.product(theta_values, variable_names):
-    axarr[0 if var.startswith("Q") else 1].plot(
-        times, results[theta][var], label=f"{var}, theta={theta}"
+suffix = "pdf"  # "png"
+
+# Generate Aggregated Plot
+n_subplots = 2
+width = 4
+height = 3
+fig, axarr = plt.subplots(n_subplots, sharex=True, figsize=(width, height))
+
+for theta, var in itertools.product(theta_values[-1:], variable_names):
+    axarr[0 if var.startswith("Q") else 1].step(
+        times, results[theta][var], where="mid", label=f"{var}"
     )
 
 axarr[0].set_ylabel("Flow Rate [m³/s]")
 axarr[1].set_ylabel("Water Level [m]")
 axarr[1].set_xlabel("Time [s]")
+
+plt.autoscale(enable=True, axis="x", tight=True)
 
 # Shrink margins
 fig.tight_layout()
@@ -156,12 +168,47 @@ fig.tight_layout()
 # Shrink each axis and put a legend to the right of the axis
 for i in range(n_subplots):
     box = axarr[i].get_position()
-    axarr[i].set_position([box.x0, box.y0, box.width * 0.74, box.height])
+    axarr[i].set_position([box.x0, box.y0, box.width * 0.9, box.height])
     axarr[i].legend(
         loc="center left", bbox_to_anchor=(1, 0.5), frameon=False, prop={"size": 8}
     )
 
-plt.autoscale(enable=True, axis="x", tight=True)
-
 # Output Plot
-plt.savefig("plot.pdf")
+plt.savefig(f"final_results.{suffix}")
+
+# Generate Individual Deformation Plots
+width = 4
+height = 2
+for var in variable_names:
+    fig, ax = plt.subplots(1, figsize=(width, height))
+    for theta in theta_values:
+        ax.step(
+            times,
+            results[theta][var],
+            where="mid",
+            color=str(0.9 - theta * 0.9),
+            linewidth=2,
+        )
+
+    # Shrink margins
+    ax.set_ylabel(f"{var} [{'m³/s' if var.startswith('Q') else 'm'}]")
+    ax.set_xlabel("Time [s]")
+
+    fig.tight_layout()
+
+    # Output Plot
+    plt.savefig(f"{var}.{suffix}")
+
+# Generate a Bar Scale Legend
+width = 7
+height = 1
+fig, ax = plt.subplots(1, figsize=(width, height))
+
+cmap = ListedColormap(list(map(str, np.linspace(1.0, 0.1, 256))))
+norm = Normalize(vmin=0.0, vmax=1.0)
+cb = ColorbarBase(ax, cmap=cmap, norm=norm, orientation="horizontal")
+cb.set_label("Homotopy Parameter")
+
+fig.tight_layout()
+
+plt.savefig(f"colorbar.{suffix}")
