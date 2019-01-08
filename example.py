@@ -9,13 +9,13 @@ from matplotlib.colorbar import ColorbarBase
 from matplotlib.colors import ListedColormap, Normalize
 
 # These parameters correspond to Table 1
-T = 10
+T = 40
 dt = 5 * 60
 times = np.arange(0, (T + 1) * dt, dt)
 H_b = -1.0
-l = 1000.0
-w = 5.0
-C = 10.0
+l = 5000.0
+w = 40.0
+C = 40.0
 H_nominal = -0.25
 Q_nominal = 0.5
 Q0 = ca.DM([0, 0])
@@ -40,7 +40,7 @@ theta = ca.MX.sym("theta")
 
 # Left boundary condition
 Q_left = np.zeros(T + 1)
-Q_left[T // 3 : 2 * (T // 3)] = 2.0
+Q_left[T // 4 : T // 3] = 300.0
 Q_left = ca.DM(Q_left).T
 
 # Hydraulic constraints
@@ -70,7 +70,7 @@ f = ca.sum1(ca.vec(H[:, 1:] ** 2))
 
 # Variable bounds
 lbQ = ca.repmat(ca.DM([-np.inf, 0.0]), 1, T)
-ubQ = ca.repmat(ca.DM([np.inf, 1.0]), 1, T)
+ubQ = ca.repmat(ca.DM([np.inf, 200.0]), 1, T)
 lbH = ca.repmat(H_b, 2, T)
 ubH = ca.repmat(np.inf, 2, T)
 
@@ -114,7 +114,7 @@ t1 = time.time()
 
 results = {}
 
-theta_values = np.linspace(0.0, 1.0, 70)
+theta_values = np.linspace(0.0, 1.0, 10)
 variable_names = "H_1", "H_2", "Q_1", "Q_2", "Q_3"
 
 for theta_value in theta_values:
@@ -183,13 +183,7 @@ for var in variable_names:
     fig, ax = plt.subplots(1, figsize=(width, height))
     ax.set_title(var)
     for theta in theta_values:
-        ax.step(
-            times,
-            results[theta][var],
-            where="mid",
-            color=str(0.9 - theta * 0.9),
-            linewidth=2,
-        )
+        ax.step(times, results[theta][var], where="mid", color=str(0.9 - theta * 0.9))
 
     # Shrink margins
     ax.set_ylabel("Flow Rate [m³/s]" if var.startswith("Q") else "Water Level [m]")
