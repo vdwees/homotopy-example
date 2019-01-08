@@ -181,6 +181,7 @@ width = 4
 height = 2
 for var in variable_names:
     fig, ax = plt.subplots(1, figsize=(width, height))
+    ax.set_title(var)
     for theta in theta_values:
         ax.step(
             times,
@@ -191,7 +192,7 @@ for var in variable_names:
         )
 
     # Shrink margins
-    ax.set_ylabel(f"{var} [{'m³/s' if var.startswith('Q') else 'm'}]")
+    ax.set_ylabel("Flow Rate [m³/s]" if var.startswith("Q") else "Water Level [m]")
     ax.set_xlabel("Time [s]")
 
     fig.tight_layout()
