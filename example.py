@@ -179,11 +179,17 @@ plt.savefig(f"final_results.{suffix}")
 # Generate Individual Deformation Plots
 width = 4
 height = 2
+lightest_grey = 0.8
 for var in variable_names:
     fig, ax = plt.subplots(1, figsize=(width, height))
     ax.set_title(var)
     for theta in theta_values:
-        ax.step(times, results[theta][var], where="mid", color=str(0.9 - theta * 0.9))
+        ax.step(
+            times,
+            results[theta][var],
+            where="mid",
+            color=str(lightest_grey - theta * lightest_grey),
+        )
 
     # Shrink margins
     ax.set_ylabel("Flow Rate [m³/s]" if var.startswith("Q") else "Water Level [m]")
@@ -199,7 +205,7 @@ width = 7
 height = 1
 fig, ax = plt.subplots(1, figsize=(width, height))
 
-cmap = ListedColormap(list(map(str, np.linspace(1.0, 0.1, 256))))
+cmap = ListedColormap(np.linspace(lightest_grey, 0.0, 256, dtype=str))
 norm = Normalize(vmin=0.0, vmax=1.0)
 cb = ColorbarBase(ax, cmap=cmap, norm=norm, orientation="horizontal")
 cb.set_label("Homotopy Parameter")
