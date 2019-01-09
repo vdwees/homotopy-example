@@ -12,14 +12,14 @@ from matplotlib.colors import ListedColormap, Normalize
 T = 72
 dt = 10 * 60
 times = np.arange(0, (T + 1) * dt, dt)
-H_b = -1.0
+H_b = -3.0
 l = 10000.0
 w = 50.0
 C = 40.0
-H_nominal = -0.25
-Q_nominal = 0.5
-Q0 = ca.DM([0, 0])
-H0 = ca.DM([0, 0])
+H_nominal = 0.0
+Q_nominal = 100
+Q0 = ca.DM([100, 100])
+H0 = ca.DM([0, 0])  # todo: fixme
 
 # Generic constants
 g = 9.81
@@ -39,7 +39,7 @@ H = ca.MX.sym("H", 2, T)
 theta = ca.MX.sym("theta")
 
 # Left boundary condition
-Q_left = np.zeros(T + 1)
+Q_left = np.full(T + 1, 100)
 Q_left[T // 4 : T // 2] = 300.0
 Q_left = ca.DM(Q_left).T
 
@@ -71,7 +71,8 @@ f = ca.sum1(ca.vec(H[:, 1:] ** 2))
 # Variable bounds
 lbQ = ca.repmat(ca.DM([-np.inf, 0.0]), 1, T)
 ubQ = ca.repmat(ca.DM([np.inf, 200.0]), 1, T)
-lbH = ca.repmat(H_b, 2, T)
+ubQ[1, 0] = 100
+lbH = ca.repmat(H_b + 2.0, 2, T)
 ubH = ca.repmat(np.inf, 2, T)
 
 # Optimization problem
