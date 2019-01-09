@@ -9,12 +9,12 @@ from matplotlib.colorbar import ColorbarBase
 from matplotlib.colors import ListedColormap, Normalize
 
 # These parameters correspond to Table 1
-T = 60
+T = 72
 dt = 10 * 60
 times = np.arange(0, (T + 1) * dt, dt)
 H_b = -1.0
-l = 6000.0
-w = 40.0
+l = 10000.0
+w = 50.0
 C = 40.0
 H_nominal = -0.25
 Q_nominal = 0.5
