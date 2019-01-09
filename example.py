@@ -148,7 +148,7 @@ suffix = "png"
 # Generate Aggregated Plot
 n_subplots = 2
 width = 4
-height = 3
+height = 4
 time_hrs = times / 3600
 fig, axarr = plt.subplots(n_subplots, sharex=True, figsize=(width, height))
 
@@ -161,15 +161,14 @@ axarr[0].set_ylabel("Flow Rate [m³/s]")
 axarr[1].set_ylabel("Water Level [m]")
 axarr[1].set_xlabel("Time [hrs]")
 
-plt.autoscale(enable=True, axis="x", tight=True)
-
 # Shrink margins
+plt.autoscale(enable=True, axis="x", tight=True)
 fig.tight_layout()
 
 # Shrink each axis and put a legend to the right of the axis
 for i in range(n_subplots):
     box = axarr[i].get_position()
-    axarr[i].set_position([box.x0, box.y0, box.width * 0.9, box.height])
+    axarr[i].set_position([box.x0, box.y0, box.width * 0.85, box.height])
     axarr[i].legend(
         loc="center left", bbox_to_anchor=(1, 0.5), frameon=False, prop={"size": 8}
     )
