@@ -143,7 +143,7 @@ print("Time elapsed in solver: {}s".format(t2 - t1))
 # Use greyscale style for plots
 plt.style.use("grayscale")
 
-suffix = "png"
+suffix = "pdf"
 
 # Generate Aggregated Plot
 n_subplots = 2
@@ -201,15 +201,16 @@ for var in variable_names:
     plt.savefig(f"{var}.{suffix}")
 
 # Generate a Bar Scale Legend
-width = 7
-height = 1
-fig, ax = plt.subplots(1, figsize=(width, height))
+width = 4
+height = 2
+fig, axarr = plt.subplots(1, 5, figsize=(width, height))
+
+for i, ax in enumerate(axarr):
+    if i != 2:
+        ax.set_axis_off()
 
 cmap = ListedColormap(np.linspace(lightest_grey, 0.0, 256, dtype=str))
 norm = Normalize(vmin=0.0, vmax=1.0)
-cb = ColorbarBase(ax, cmap=cmap, norm=norm, orientation="horizontal")
-cb.set_label("Homotopy Parameter")
-
-fig.tight_layout()
+cb = ColorbarBase(axarr[2], cmap=cmap, norm=norm, orientation="vertical")
 
 plt.savefig(f"colorbar.{suffix}")
