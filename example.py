@@ -9,8 +9,8 @@ from matplotlib.colorbar import ColorbarBase
 from matplotlib.colors import ListedColormap, Normalize
 
 # These parameters correspond to Table 1
-T = 40
-dt = 5 * 60
+T = 60
+dt = 10 * 60
 times = np.arange(0, (T + 1) * dt, dt)
 H_b = -1.0
 l = 6000.0
@@ -40,7 +40,7 @@ theta = ca.MX.sym("theta")
 
 # Left boundary condition
 Q_left = np.zeros(T + 1)
-Q_left[T // 4 : T // 3] = 300.0
+Q_left[T // 4 : T // 2] = 300.0
 Q_left = ca.DM(Q_left).T
 
 # Hydraulic constraints
