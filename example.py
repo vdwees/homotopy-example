@@ -143,22 +143,23 @@ print("Time elapsed in solver: {}s".format(t2 - t1))
 # Use greyscale style for plots
 plt.style.use("grayscale")
 
-suffix = "pdf"  # "png"
+suffix = "png"
 
 # Generate Aggregated Plot
 n_subplots = 2
 width = 4
 height = 3
+time_hrs = times / 3600
 fig, axarr = plt.subplots(n_subplots, sharex=True, figsize=(width, height))
 
 for theta, var in itertools.product(theta_values[-1:], variable_names):
     axarr[0 if var.startswith("Q") else 1].step(
-        times, results[theta][var], where="mid", label=f"{var}"
+        time_hrs, results[theta][var], where="mid", label=f"{var}"
     )
 
 axarr[0].set_ylabel("Flow Rate [m³/s]")
 axarr[1].set_ylabel("Water Level [m]")
-axarr[1].set_xlabel("Time [s]")
+axarr[1].set_xlabel("Time [hrs]")
 
 plt.autoscale(enable=True, axis="x", tight=True)
 
@@ -185,7 +186,7 @@ for var in variable_names:
     ax.set_title(var)
     for theta in theta_values:
         ax.step(
-            times,
+            time_hrs,
             results[theta][var],
             where="mid",
             color=str(lightest_grey - theta * lightest_grey),
@@ -193,7 +194,7 @@ for var in variable_names:
 
     # Shrink margins
     ax.set_ylabel("Flow Rate [m³/s]" if var.startswith("Q") else "Water Level [m]")
-    ax.set_xlabel("Time [s]")
+    ax.set_xlabel("Time [hrs]")
 
     fig.tight_layout()
 
