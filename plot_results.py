@@ -11,7 +11,7 @@ variable_names = results[theta_values[0]].keys()
 # Use greyscale style for plots
 plt.style.use("grayscale")
 
-suffix = "png"
+file_type = "pdf"
 
 # Generate Aggregated Plot
 n_subplots = 2
@@ -42,7 +42,7 @@ for i in range(n_subplots):
     )
 
 # Output Plot
-plt.savefig(f"final_results.{suffix}")
+plt.savefig(f"final_results.{file_type}")
 
 # Generate Individual Deformation Plots
 width = 4
@@ -67,7 +67,7 @@ for var in variable_names:
     fig.tight_layout()
 
     # Output Plot
-    plt.savefig(f"{var}.{suffix}")
+    plt.savefig(f"{var}.{file_type}")
 
 # Generate a Bar Scale Legend
 width = 4
@@ -82,4 +82,4 @@ cmap = ListedColormap(np.linspace(lightest_grey, 0.0, 256, dtype=str))
 norm = Normalize(vmin=0.0, vmax=1.0)
 cb = ColorbarBase(axarr[2], cmap=cmap, norm=norm, orientation="vertical")
 
-plt.savefig(f"colorbar.{suffix}")
+plt.savefig(f"colorbar.{file_type}")
