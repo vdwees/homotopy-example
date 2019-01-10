@@ -1,8 +1,13 @@
+import numpy as np
 from bokeh.layouts import column, gridplot
 from bokeh.models import ColumnDataSource, CustomJS, Slider
 from bokeh.plotting import figure, output_file, show
 
-from example import *
+from example import results, times
+
+theta_values = list(results.keys())
+variable_names = results[theta_values[0]].keys()
+
 
 shared_data = {"times": times, "theta_values": [theta_values for time in times]}
 plots = []

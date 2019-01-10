@@ -1,8 +1,12 @@
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.colorbar import ColorbarBase
 from matplotlib.colors import ListedColormap, Normalize
 
-from example import *
+from example import results, times
+
+theta_values = list(results.keys())
+variable_names = results[theta_values[0]].keys()
 
 # Use greyscale style for plots
 plt.style.use("grayscale")

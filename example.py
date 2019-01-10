@@ -14,6 +14,7 @@ w = 50.0
 C = 40.0
 H_nominal = 0.0
 Q_nominal = 100
+n_theta_steps = 10
 
 # Generic constants
 g = 9.81
@@ -117,12 +118,11 @@ solver = ca.nlpsol(
 x0 = ca.repmat(0, X.size1())
 
 # Solve
-t1 = time.time()
+t0 = time.time()
 
 results = {}
 
-theta_values = np.linspace(0.0, 1.0, 10)
-for theta_value in theta_values:
+for theta_value in np.linspace(0.0, 1.0, n_theta_steps):
     solution = solver(lbx=lbX, ubx=ubX, lbg=lbg, ubg=ubg, p=theta_value, x0=x0)
     if solver.stats()["return_status"] != "Solve_Succeeded":
         raise Exception(
@@ -137,8 +137,5 @@ for theta_value in theta_values:
         d[f"Q_{i + 2}"] = np.array(ca.horzcat(Q0[i], Q_res[i, :])).flatten()
         d[f"H_{i + 1}"] = np.array(ca.horzcat(H0[i], H_res[i, :])).flatten()
     results[theta_value] = d
-variable_names = d.keys()
 
-t2 = time.time()
-
-print("Time elapsed in solver: {}s".format(t2 - t1))
+print("Time elapsed in solver: {}s".format(time.time() - t0))
