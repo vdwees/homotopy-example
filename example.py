@@ -1,41 +1,43 @@
-import itertools
 import time
 
 import casadi as ca
-import matplotlib.animation as manimation
-import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.colorbar import ColorbarBase
-from matplotlib.colors import ListedColormap, Normalize
 
 # These parameters correspond to Table 1
 T = 72
 dt = 10 * 60
 times = np.arange(0, (T + 1) * dt, dt)
-H_b = -3.0
+n_level_nodes = 10
+H_b = -5.0
 l = 10000.0
 w = 50.0
 C = 40.0
 H_nominal = 0.0
 Q_nominal = 100
-Q0 = ca.DM([100, 100])
-H0 = ca.DM([0, 0])  # todo: fixme
 
 # Generic constants
 g = 9.81
 eps = 1e-12
 
 # Derived quantities
-dx = l / 2.0
+dx = l / n_level_nodes
 A_nominal = w * (H_nominal - H_b)
 P_nominal = w + 2 * (H_nominal - H_b)
 
 # Smoothed absolute value function
 sabs = lambda x: ca.sqrt(x ** 2 + eps)
 
+# Compute steady state initial condition
+Q0 = np.full(n_level_nodes, 100.0)
+H0 = np.full(n_level_nodes, 0.0)
+for i in range(1, n_level_nodes):
+    A = w / 2.0 * (H0[i - 1] + H0[i] - 2 * H_b)
+    P = w + H0[i - 1] + H0[i] - 2 * H_b
+    H0[i] = H0[i - 1] - dx * (P / A ** 3) * sabs(Q0[i]) * Q0[i] / C ** 2
+
 # Symbols
-Q = ca.MX.sym("Q", 2, T)
-H = ca.MX.sym("H", 2, T)
+Q = ca.MX.sym("Q", n_level_nodes, T)
+H = ca.MX.sym("H", n_level_nodes, T)
 theta = ca.MX.sym("theta")
 
 # Left boundary condition
@@ -66,14 +68,18 @@ d = (
 )
 
 # Objective function
-f = ca.sum1(ca.vec(H[:, 1:] ** 2))
+f = ca.sum1(ca.vec(H ** 2))
 
 # Variable bounds
-lbQ = ca.repmat(ca.DM([-np.inf, 0.0]), 1, T)
-ubQ = ca.repmat(ca.DM([np.inf, 200.0]), 1, T)
-ubQ[1, 0] = 100
-lbH = ca.repmat(H_b + 2.0, 2, T)
-ubH = ca.repmat(np.inf, 2, T)
+lbQ = np.full(n_level_nodes, -np.inf)
+lbQ[-1] = 100.0
+ubQ = np.full(n_level_nodes, np.inf)
+ubQ[-1] = 200.0
+
+lbQ = ca.repmat(ca.DM(lbQ), 1, T)
+ubQ = ca.repmat(ca.DM(ubQ), 1, T)
+lbH = ca.repmat(H_b, n_level_nodes, T)
+ubH = ca.repmat(np.inf, n_level_nodes, T)
 
 # Optimization problem
 assert Q.size() == lbQ.size()
@@ -116,8 +122,6 @@ t1 = time.time()
 results = {}
 
 theta_values = np.linspace(0.0, 1.0, 10)
-variable_names = "H_1", "H_2", "Q_1", "Q_2", "Q_3"
-
 for theta_value in theta_values:
     solution = solver(lbx=lbX, ubx=ubX, lbg=lbg, ubg=ubg, p=theta_value, x0=x0)
     if solver.stats()["return_status"] != "Solve_Succeeded":
@@ -129,89 +133,12 @@ for theta_value in theta_values:
     H_res = ca.reshape(x0[Q.size1() * Q.size2() :], H.size1(), H.size2())
     d = {}
     d["Q_1"] = np.array(Q_left).flatten()
-    d["Q_2"] = np.array(ca.horzcat(Q0[0], Q_res[0, :])).flatten()
-    d["Q_3"] = np.array(ca.horzcat(Q0[1], Q_res[1, :])).flatten()
-    d["H_1"] = np.array(ca.horzcat(H0[0], H_res[0, :])).flatten()
-    d["H_2"] = np.array(ca.horzcat(H0[1], H_res[1, :])).flatten()
-    assert set(variable_names) == set(d.keys())
+    for i in range(n_level_nodes):
+        d[f"Q_{i + 2}"] = np.array(ca.horzcat(Q0[i], Q_res[i, :])).flatten()
+        d[f"H_{i + 1}"] = np.array(ca.horzcat(H0[i], H_res[i, :])).flatten()
     results[theta_value] = d
+variable_names = d.keys()
 
 t2 = time.time()
 
 print("Time elapsed in solver: {}s".format(t2 - t1))
-
-
-# Use greyscale style for plots
-plt.style.use("grayscale")
-
-suffix = "pdf"
-
-# Generate Aggregated Plot
-n_subplots = 2
-width = 4
-height = 4
-time_hrs = times / 3600
-fig, axarr = plt.subplots(n_subplots, sharex=True, figsize=(width, height))
-
-for theta, var in itertools.product(theta_values[-1:], variable_names):
-    axarr[0 if var.startswith("Q") else 1].step(
-        time_hrs, results[theta][var], where="mid", label=f"{var}"
-    )
-
-axarr[0].set_ylabel("Flow Rate [m³/s]")
-axarr[1].set_ylabel("Water Level [m]")
-axarr[1].set_xlabel("Time [hrs]")
-
-# Shrink margins
-plt.autoscale(enable=True, axis="x", tight=True)
-fig.tight_layout()
-
-# Shrink each axis and put a legend to the right of the axis
-for i in range(n_subplots):
-    box = axarr[i].get_position()
-    axarr[i].set_position([box.x0, box.y0, box.width * 0.85, box.height])
-    axarr[i].legend(
-        loc="center left", bbox_to_anchor=(1, 0.5), frameon=False, prop={"size": 8}
-    )
-
-# Output Plot
-plt.savefig(f"final_results.{suffix}")
-
-# Generate Individual Deformation Plots
-width = 4
-height = 2
-lightest_grey = 0.8
-for var in variable_names:
-    fig, ax = plt.subplots(1, figsize=(width, height))
-    ax.set_title(var)
-    for theta in theta_values:
-        ax.step(
-            time_hrs,
-            results[theta][var],
-            where="mid",
-            color=str(lightest_grey - theta * lightest_grey),
-        )
-
-    # Shrink margins
-    ax.set_ylabel("Flow Rate [m³/s]" if var.startswith("Q") else "Water Level [m]")
-    ax.set_xlabel("Time [hrs]")
-
-    fig.tight_layout()
-
-    # Output Plot
-    plt.savefig(f"{var}.{suffix}")
-
-# Generate a Bar Scale Legend
-width = 4
-height = 2
-fig, axarr = plt.subplots(1, 5, figsize=(width, height))
-
-for i, ax in enumerate(axarr):
-    if i != 2:
-        ax.set_axis_off()
-
-cmap = ListedColormap(np.linspace(lightest_grey, 0.0, 256, dtype=str))
-norm = Normalize(vmin=0.0, vmax=1.0)
-cb = ColorbarBase(axarr[2], cmap=cmap, norm=norm, orientation="vertical")
-
-plt.savefig(f"colorbar.{suffix}")
